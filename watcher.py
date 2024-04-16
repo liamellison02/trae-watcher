@@ -54,16 +54,16 @@ def main():
 
     res = get_search_results(get_url("trae+young", "100", "year", "new"))
     data = clean_data(res)
+    
     for row in data.iterrows():
         values = {key: row[key] for key in row.index if key != 'name'}
+        logging.info(f"Got {row['name']}")
         producer.produce(
             topic="reddit_listings",
             key=row['name'],
             value=values,
             on_delivery=on_delivery
         )
-
-    logging.debug(f"Got {clean_data(res)}")
     producer.flush()
 
 
