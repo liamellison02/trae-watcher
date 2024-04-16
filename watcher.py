@@ -32,12 +32,13 @@ def get_search_results(url):
 
 def clean_data(json_data):
 	data = json_data['data']['children']
-	df_rows = []
+
+	df_data = pd.Series()
 
 	for item in data:
 		item_data = item['data']
 		row = [item_data.get(key, np.nan) for key in specific_keys]
-		df_rows.append(row)
+		
 
 	return pd.DataFrame(df_rows, columns=specific_keys)
 
@@ -50,11 +51,11 @@ def main():
 	logging.info("START")
 
 	schema_registry_client = SchemaRegistryClient(config["schema_registry"])
-	schema_registry_client.get_latest_version("")
+	reddit_listings_schema = schema_registry_client.get_latest_version("reddit_listings")
 
 	kafka_config = config["kafka"] | {
 		"key.serializer": StringSerializer(),
-		"value.serializer": JSONSerializer(schema_registry_client, schema_str)
+		"value.serializer": JSONSerializer(schema_registry_client, reddit_listings_schema.schema.schema_str)
 	}
 
 	producer = SerializingProducer(kafka_config)
@@ -62,15 +63,19 @@ def main():
 	res = get_search_results(get_url("trae+young", "100", "year", "new"))
 	df = clean_data(res)
 	identifiers = df.loc[:, 'name']
-	for id in identifiers:
+	for name in identifiers:
 		producer.produce(
 			topic="reddit_listings",
-			key=id,
-			value=value,
+			key=name,
+			value={
+				f"": ""
+				
+			},
 			on_delivery=on_delivery
 			)
 
 	logging.debug(f"Got {clean_data(res)}")
+	producer.flush()
 
 
 if __name__ == "__main__":
