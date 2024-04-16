@@ -5,6 +5,12 @@ import json
 import pandas as pd
 import numpy as np
 
+from config import config
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.serialization import StringSerializer
+from confluent_kafka.schema_registry.json_schema import JSONSerializer
+from confluent_kafka.serializing_producer import SerializingProducer
+
 
 base_url = "https://www.reddit.com"
 endpoint = "/r/AtlantaHawks"
@@ -43,7 +49,14 @@ def on_delivery(err, record):
 def main():
 	logging.info("START")
 
-	kafka_config = config["kafka"]
+	schema_registry_client = SchemaRegistryClient(config["schema_registry"])
+	schema_registry_client.get_latest_version("")
+
+	kafka_config = config["kafka"] | {
+		"key.serializer": StringSerializer(),
+		"value.serializer": JSONSerializer(schema_registry_client, schema_str)
+	}
+
 	producer = SerializingProducer(kafka_config)
 
 	res = get_search_results(get_url("trae+young", "100", "year", "new"))
