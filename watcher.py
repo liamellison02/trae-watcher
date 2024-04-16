@@ -32,17 +32,9 @@ def get_search_results(url):
 
 
 def clean_data(json_data: dict):
-    listings = json_data['data']['children']
-    listings.get(key) for key in specific_keys
+    to_df_data = [[listing['data'][key] for key in specific_keys] for listing in json_data['data']['children']]
 
-
-    df_data = pd.Series()
-
-    for item in data:
-        item_data = item['data']
-        pd.Series(data=[item_data.get(key, np.nan) for key in specific_keys], index=specific_keys)
-
-    return pd.DataFrame(df_data, columns=specific_keys)
+    return pd.Series(to_df_data, index=specific_keys)
 
 
 def on_delivery(err, record):
