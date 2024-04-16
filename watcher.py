@@ -32,7 +32,7 @@ def get_search_results(url):
 
 
 def clean_data(json_data: dict):
-    return pd.Series([[listing['data'][key] for key in specific_keys] for listing in json_data['data']['children']], index=specific_keys)
+    return pd.DataFrame([[listing['data'][key] for key in specific_keys] for listing in json_data['data']['children']], columns=specific_keys, index=range(len(json_data['data']['children'])))
 
 
 def on_delivery(err, record):
@@ -53,16 +53,13 @@ def main():
     producer = SerializingProducer(kafka_config)
 
     res = get_search_results(get_url("trae+young", "100", "year", "new"))
-    df = clean_data(res)
-    identifiers = df.loc[:, 'name']
-    for name in identifiers:
+    data = clean_data(res)
+    for row in data.iterrows():
+        values = {key: row[key] for key in row.index if key != 'name'}
         producer.produce(
             topic="reddit_listings",
-            key=name,
-            value={
-                f"": ""
-
-            },
+            key=row['name'],
+            value=values,
             on_delivery=on_delivery
         )
 
