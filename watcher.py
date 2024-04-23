@@ -2,7 +2,6 @@ import logging
 import sys
 import requests
 import json
-import pandas as pd
 
 from config import config
 from confluent_kafka.schema_registry import SchemaRegistryClient
