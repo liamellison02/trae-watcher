@@ -3,7 +3,6 @@ import sys
 import requests
 import json
 import pandas as pd
-import numpy as np
 
 from config import config
 from confluent_kafka.schema_registry import SchemaRegistryClient
@@ -32,8 +31,7 @@ def get_search_results(url):
 
 
 def clean_data(json_data: dict):
-    return pd.DataFrame([[listing['data'][key] for key in specific_keys] for listing in json_data['data']['children']], columns=specific_keys, index=range(len(json_data['data']['children'])))
-
+    return [{key: listing['data'][key] for key in specific_keys} for listing in json_data['data']['children']]
 
 def on_delivery(err, record):
     pass
@@ -47,7 +45,7 @@ def main():
 
     kafka_config = config["kafka"] | {
         "key.serializer": StringSerializer(),
-        "value.serializer": JSONSerializer(schema_registry_client, reddit_listings_schema.schema.schema_str)
+        "value.serializer": JSONSerializer(schema_registry_client=schema_registry_client, schema_str=reddit_listings_schema.schema.schema_str)
     }
 
     producer = SerializingProducer(kafka_config)
@@ -55,12 +53,12 @@ def main():
     res = get_search_results(get_url("trae+young", "100", "year", "new"))
     data = clean_data(res)
     
-    for row in data.iterrows():
-        values = {key: row[key] for key in row.index if key != 'name'}
-        logging.info(f"Got {row['name']}")
+    for listing in data:
+        values = {key: value for key, value in listing.items() if key != 'name'}
+        logging.info(f"Got {listing['name']}")
         producer.produce(
             topic="reddit_listings",
-            key=row['name'],
+            key=listing['name'],
             value=values,
             on_delivery=on_delivery
         )
